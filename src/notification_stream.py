@@ -44,8 +44,8 @@ class Push(BaseModel):
             "kwargs": {},
         }
         id = generate_md5_hash(result)
-        result["id"] = id
-        result["timestamp"] = time.time()
+        result["input"]["id"] = id
+        result["input"]["timestamp"] = time.time()
         return result
 
 
@@ -108,9 +108,9 @@ def classify(push: Push):
 
     print(push.generate_payload())
     output = push.generate_payload()
-    print(output)
     response = requests.post(
-        "http://localhost:8000/classify/invoke/",
+        "http://localhost:8000/classify/invoke",
+        # "https://mind-sift-app-262464751960.us-central1.run.app/classify/invoke",
         json=output,
     )
     print("classify response", response.status_code)
