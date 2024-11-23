@@ -37,19 +37,11 @@ def list_pushes():
 
 async def process(msg):
     event = json.loads(msg)
-    if event.get("type", "nop") != "nop":
+    if event.get("type") == "push":
         p = event.get("push", {})
-        title = p.get("title")
-        body = p.get("body")
-        app_name = p.get("application_name")
         print()
-        print(event)
+        print(p)
         print()
-        print(10 * "-")
-        print("app_name", app_name)
-        print("title", title)
-        print("body", body)
-        print(10 * "-")
 
 
 async def stream():
