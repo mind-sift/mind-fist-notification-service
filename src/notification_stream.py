@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+from datetime import datetime
+from typing import Any
 
 import requests
 import websockets
@@ -19,6 +21,20 @@ class Push(BaseModel):
     package_name: str
     notification_id: str
     notification_tag: str
+
+    def generate_payload(self) -> dict[str, Any]:
+        return {
+            "id": self.notification_id,
+            "notification_tag": self.notification_tag,
+            "package_name": self.package_name,
+            "source_user_iden": self.source_user_iden,
+            "title": self.title,
+            "message": self.body,
+            "app_name": self.application_name,
+            "timestamp": datetime.now().isoformat(),
+            "action_url": 'owo',
+            "priority": "low",
+        }
 
 
 logging.basicConfig(
@@ -61,7 +77,7 @@ def dismiss_push(push: Push):
     json_data = {
         'push': {
             'notification_id': push.notification_id,
-            "notification_tag": push.notification_tag,
+            'notification_tag': push.notification_tag,
             'package_name': push.package_name,
             'source_user_iden': push.source_user_iden,
             'type': 'dismissal',
@@ -74,6 +90,11 @@ def dismiss_push(push: Push):
     )
 
     print("notification dismiss response status code", response.status_code)
+
+
+def classify(push: Push):
+    response = requests.post('https://', payload=push.generate_payload())
+    print("classify response", response.status_code)
 
 
 async def process(msg):
