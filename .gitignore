@@ -2,3 +2,7 @@
 venv
 *.pyc
 src/__pycache__/
+.python-version
+__pycache__
+temp.ipynb
+*temp*
