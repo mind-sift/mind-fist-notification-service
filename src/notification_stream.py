@@ -9,7 +9,9 @@ import hashlib
 import requests
 import websockets
 from pydantic import BaseModel
+import asyncio
 
+DEV = False
 
 def generate_md5_hash(data):
     json_data = json.dumps(data, sort_keys=True)
@@ -53,64 +55,16 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.CRITICAL,
 )
-
-
-def dismiss_notification(id: str):
-    KEY = os.getenv("PUSHBULLET_API_KEY")
-    response = requests.delete(
-        f"https://api.pushbullet.com/v2/pushes/{id}",
-        headers={
-            "Access-Token": KEY,
-        },
-    )
-    print("response status:", response.status_code)
-
-
-def list_pushes():
-    KEY = os.getenv("PUSHBULLET_API_KEY")
-    response = requests.get(
-        "https://api.pushbullet.com/v2/pushes",
-        headers={
-            "Access-Token": KEY,
-        },
-    )
-    print("response status:", response.status_code)
-    print("response json:", response.json())
-
-
-def dismiss_push(push: Push):
-    KEY = os.getenv("PUSHBULLET_API_KEY")
-
-    headers = {
-        "Access-Token": KEY,
-        "Content-Type": "application/json",
-    }
-
-    json_data = {
-        "push": {
-            "notification_id": push.notification_id,
-            "notification_tag": push.notification_tag,
-            "package_name": push.package_name,
-            "source_user_iden": push.source_user_iden,
-            "type": "dismissal",
-        },
-        "type": "push",
-    }
-
-    response = requests.post(
-        "https://api.pushbullet.com/v2/ephemerals", headers=headers, json=json_data
-    )
-
-    print("notification dismiss response status code", response.status_code)
-
-
 def classify(push: Push):
 
     print(push.generate_payload())
     output = push.generate_payload()
+    if DEV:
+        path = "http://localhost:8000/classify/invoke"
+    else:
+        path = "https://mind-sift-app-262464751960.us-central1.run.app/classify/invoke"
     response = requests.post(
-        "http://localhost:8000/classify/invoke",
-        # "https://mind-sift-app-262464751960.us-central1.run.app/classify/invoke",
+        path,
         json=output,
     )
     print("classify response", response.status_code)
@@ -124,13 +78,12 @@ async def process(msg):
             push = Push(**p_json_data)
         except ValueError as e:
             print(e.errors())
-            print()
+            print("uwu")
             print(p_json_data)
             return
         print()
         print(push.model_dump())
         print()
-        # dismiss_push(push)
         classify(push)
 
 
@@ -145,3 +98,28 @@ async def stream():
                 await process(message)
         except websockets.ConnectionClosed:
             continue
+
+# async def stream():
+#     KEY = os.getenv("PUSHBULLET_API_KEY")
+#     backoff = 1  # Initial backoff time in seconds
+#     max_backoff = 60  # Maximum backoff time
+
+#     while True:
+#         try:
+#             async for websocket in websockets.connect(
+#                 f"wss://stream.pushbullet.com/websocket/{KEY}",
+#                 logger=logging.getLogger("websockets"),
+#             ):
+#                 try:
+#                     async for message in websocket:
+#                         await process(message)
+#                 except websockets.ConnectionClosed:
+#                     print("Websocket connection closed. Reconnecting...")
+#                     logging.warning("Websocket connection closed. Reconnecting...")
+#                     break  # Exit inner `async for websocket` loop
+#         except Exception as e:
+#             logging.error(f"Connection error: {e}. Retrying in {backoff} seconds...")
+#             await asyncio.sleep(backoff)
+#             backoff = min(backoff * 2, max_backoff)  # Exponential backoff with a cap
+#         else:
+#             backoff = 1  # Reset backoff after a successful connection
